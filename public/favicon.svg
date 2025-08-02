@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <!-- Shield Background -->
+  <path d="M16 2 L28 6 L28 18 Q28 24 16 30 Q4 24 4 18 L4 6 Z" 
+        fill="#2D2D2D" stroke="#000" stroke-width="1"/>
+  
+  <!-- Inner Shield -->
+  <path d="M16 3.5 L26 7 L26 17 Q26 22 16 27 Q6 22 6 17 L6 7 Z" 
+        fill="#444444" stroke="#EDEDED" stroke-width="0.5"/>
+  
+  <!-- Red Accent -->
+  <path d="M16 3.5 L26 7 L26 8 L16 4.5 L6 8 L6 7 Z" fill="#DA0037"/>
+  <path d="M6 17 Q6 22 16 27 Q20 25 23 23 L23 17 L6 17 Z" fill="#DA0037"/>
+  
+  <!-- Crown -->
+  <g transform="translate(16,8.5)">
+    <!-- Crown Base -->
+    <rect x="-3" y="1" width="6" height="1.2" fill="#EDEDED" stroke="#000" stroke-width="0.1"/>
+    
+    <!-- Crown Points -->
+    <polygon points="-2.5,-0.5 -1.5,0 -0.5,-0.3 0,0.2 0.5,-0.3 1.5,0 2.5,-0.5 3,1 -3,1" 
+             fill="#EDEDED" stroke="#000" stroke-width="0.1"/>
+    
+    <!-- Crown Jewel -->
+    <polygon points="-0.2,-0.2 0,-1 0.2,-0.2" fill="#DA0037"/>
+  </g>
+  
+  <!-- BRRADS Text -->
+  <g transform="translate(16,15)">
+    <text x="0" y="0" text-anchor="middle" font-family="Arial Black, sans-serif" 
+          font-size="4" font-weight="900" fill="#EDEDED" stroke="#000" stroke-width="0.1">
+      BRRADS
+    </text>
+  </g>
+  
+  <!-- EMPIRE Text -->
+  <g transform="translate(16,19)">
+    <text x="0" y="0" text-anchor="middle" font-family="Arial Black, sans-serif" 
+          font-size="3" font-weight="900" fill="#EDEDED" stroke="#000" stroke-width="0.1">
+      EMPIRE
+    </text>
+  </g>
+</svg>
