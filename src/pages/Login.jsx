@@ -309,16 +309,7 @@ const Login = () => {
               </button>
             </div>
 
-            {/* Admin Info */}
-            {isLogin && (
-              <div className="bg-brrads-red bg-opacity-20 border border-brrads-red border-opacity-30 rounded-lg p-4">
-                <h4 className="text-brrads-peach font-semibold text-sm mb-2">Default Admin Account:</h4>
-                <div className="text-brrads-light text-xs space-y-1">
-                  <div><strong>Username:</strong> admin</div>
-                  <div><strong>Password:</strong> admin123</div>
-                </div>
-              </div>
-            )}
+      
           </div>
         </div>
 
