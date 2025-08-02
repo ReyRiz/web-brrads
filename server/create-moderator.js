@@ -1,30 +1,37 @@
-const { db } = require('./config/database');
-const bcrypt = require('bcrypt');
+const { prisma } = require('./config/prisma');
+const bcrypt = require('bcryptjs');
 
 const createModerator = async () => {
   try {
     const hashedPassword = await bcrypt.hash('moderator123', 10);
     
-    db.run(
-      `INSERT INTO users (username, password, email, full_name, role, is_active, joined_date, created_at) 
-       VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
-      ['moderator', hashedPassword, 'moderator@brrads.com', 'Test Moderator', 'moderator', 1],
-      function(err) {
-        if (err) {
-          console.log('❌ Error creating moderator:', err.message);
-        } else {
-          console.log('✅ Moderator account created successfully!');
-          console.log('🔑 Username: moderator');
-          console.log('🔑 Password: moderator123');
-          console.log('📧 Email: moderator@brrads.com');
-          console.log('👤 Role: moderator');
-        }
-        process.exit();
+    const moderator = await prisma.user.create({
+      data: {
+        username: 'moderator',
+        password: hashedPassword,
+        email: 'moderator@brrads.com',
+        fullName: 'Test Moderator',
+        role: 'moderator',
+        isActive: true
       }
-    );
+    });
+
+    console.log('✅ Moderator account created successfully!');
+    console.log('🔑 Username: moderator');
+    console.log('🔑 Password: moderator123');
+    console.log('📧 Email: moderator@brrads.com');
+    console.log('👤 Role: moderator');
+    console.log('🆔 User ID:', moderator.id);
+
   } catch (error) {
-    console.log('❌ Error:', error.message);
-    process.exit(1);
+    if (error.code === 'P2002') {
+      console.log('❌ Username already exists');
+    } else {
+      console.log('❌ Error creating moderator:', error.message);
+    }
+  } finally {
+    await prisma.$disconnect();
+    process.exit();
   }
 };
 

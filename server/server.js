@@ -5,7 +5,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
-const { initializeDatabase } = require('./config/database');
+const { initializeDatabase } = require('./config/prisma');
 
 // Import routes
 const authRoutes = require('./routes/auth');

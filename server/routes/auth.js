@@ -1,7 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { db } = require('../config/database');
+const { prisma } = require('../config/prisma');
 const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
@@ -20,112 +20,151 @@ router.post('/register', async (req, res) => {
 
   try {
     // Check if user already exists
-    const checkQuery = email ? 
-      'SELECT id FROM users WHERE username = ? OR email = ?' : 
-      'SELECT id FROM users WHERE username = ?';
-    const checkParams = email ? [username, email] : [username];
-    
-    db.get(checkQuery, checkParams, async (err, row) => {
-      if (err) {
-        console.error('Database error during user check:', err);
-        return res.status(500).json({ message: 'Database error' });
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { username: username },
+          { email: email || undefined }
+        ].filter(Boolean)
       }
-
-      if (row) {
-        return res.status(400).json({ message: 'Username or email already exists' });
-      }
-
-      // Hash password
-      const saltRounds = 10;
-      const hashedPassword = await bcrypt.hash(password, saltRounds);
-
-      // Insert new user
-      db.run(
-        'INSERT INTO users (username, password, email, full_name, role, joined_date) VALUES (?, ?, ?, ?, ?, ?)',
-        [username, hashedPassword, email || null, full_name || null, 'member', new Date().toISOString()],
-        function(err) {
-          if (err) {
-            console.error('Database error during user creation:', err);
-            return res.status(500).json({ message: 'Error creating user: ' + err.message });
-          }
-
-          res.status(201).json({ 
-            message: 'Member account created successfully! Welcome to BRRADS Empire!',
-            userId: this.lastID 
-          });
-        }
-      );
     });
+
+    if (existingUser) {
+      return res.status(400).json({ message: 'Username or email already exists' });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create new user
+    const newUser = await prisma.user.create({
+      data: {
+        username,
+        password: hashedPassword,
+        email: email || null,
+        full_name: full_name || null,
+        role: 'member',
+        is_active: true,
+      }
+    });
+
+    res.status(201).json({ 
+      message: 'Member account created successfully! Welcome to BRRADS Empire!',
+      userId: newUser.id 
+    });
+
   } catch (error) {
-    res.status(500).json({ message: 'Server error' });
+    console.error('Registration error:', error);
+    res.status(500).json({ message: 'Server error during registration' });
   }
 });
 
 // Login
-router.post('/login', (req, res) => {
+router.post('/login', async (req, res) => {
   const { username, password } = req.body;
 
   if (!username || !password) {
     return res.status(400).json({ message: 'Username and password are required' });
   }
 
-  db.get('SELECT * FROM users WHERE username = ?', [username], async (err, user) => {
-    if (err) {
-      return res.status(500).json({ message: 'Database error' });
-    }
+  try {
+    // Find user by username
+    const user = await prisma.user.findUnique({
+      where: { username }
+    });
 
     if (!user) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    try {
-      const validPassword = await bcrypt.compare(password, user.password);
-      
-      if (!validPassword) {
-        return res.status(401).json({ message: 'Invalid credentials' });
-      }
-
-      // Generate JWT token
-      const token = jwt.sign(
-        { 
-          id: user.id, 
-          username: user.username, 
-          role: user.role,
-          full_name: user.full_name
-        },
-        process.env.JWT_SECRET || 'fallback_secret',
-        { expiresIn: '24h' }
-      );
-
-      // Update last login
-      db.run('UPDATE users SET last_login = ? WHERE id = ?', [new Date().toISOString(), user.id]);
-
-      res.json({
-        message: 'Login successful',
-        token,
-        user: {
-          id: user.id,
-          username: user.username,
-          role: user.role,
-          full_name: user.full_name,
-          email: user.email
-        }
-      });
-    } catch (error) {
-      res.status(500).json({ message: 'Server error' });
+    // Check if user is active
+    if (!user.is_active) {
+      return res.status(401).json({ message: 'Account is disabled' });
     }
-  });
+
+    // Verify password
+    const validPassword = await bcrypt.compare(password, user.password);
+    
+    if (!validPassword) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { 
+        id: user.id, 
+        username: user.username, 
+        role: user.role,
+        full_name: user.full_name
+      },
+      process.env.JWT_SECRET || 'fallback_secret',
+      { expiresIn: '24h' }
+    );
+
+    // Update last login
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { last_login: new Date() }
+    });
+
+    res.json({
+      message: 'Login successful',
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
+        role: user.role,
+        full_name: user.full_name,
+        email: user.email
+      }
+    });
+
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ message: 'Server error during login' });
+  }
 });
 
 // Get current user info
-router.get('/me', authenticateToken, (req, res) => {
-  res.json({
-    user: {
-      id: req.user.id,
-      username: req.user.username,
-      role: req.user.role
+router.get('/me', authenticateToken, async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: {
+        id: true,
+        username: true,
+        role: true,
+        full_name: true,
+        email: true,
+        bio: true,
+        profile_image: true,
+        joined_date: true,
+        is_active: true
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
     }
-  });
+
+    res.json({
+      user: {
+        id: user.id,
+        username: user.username,
+        role: user.role,
+        full_name: user.full_name,
+        email: user.email,
+        bio: user.bio,
+        profile_image: user.profile_image,
+        joined_date: user.joined_date,
+        is_active: user.is_active
+      }
+    });
+
+  } catch (error) {
+    console.error('Get user info error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
 });
 
 module.exports = router;

@@ -1,0 +1,102 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  username     String   @unique
+  password     String
+  role         String   @default("member")
+  email        String?
+  full_name    String?
+  profile_image String?
+  bio          String?
+  joined_date  DateTime @default(now())
+  last_login   DateTime?
+  is_active    Boolean  @default(true)
+  created_at   DateTime @default(now())
+
+  // Relations
+  game_requests       GameRequest[]
+  fan_arts_submitted  FanArt[] @relation("FanArtSubmittedBy")
+  fan_arts_approved   FanArt[] @relation("FanArtApprovedBy")
+  live_streams        LiveStream[]
+
+  @@map("users")
+}
+
+model GameRequest {
+  id               Int      @id @default(autoincrement())
+  game_name        String
+  game_link        String?
+  requester_name   String
+  image_path       String?
+  status           String   @default("pending")
+  requested_by     Int?
+  duplicate_of     Int?
+  played_at        DateTime?
+  rejection_reason String?
+  created_at       DateTime @default(now())
+
+  // Relations
+  user         User?        @relation(fields: [requested_by], references: [id])
+  duplicate    GameRequest? @relation("GameRequestDuplicate", fields: [duplicate_of], references: [id])
+  duplicates   GameRequest[] @relation("GameRequestDuplicate")
+
+  @@map("game_requests")
+}
+
+model FanArt {
+  id           Int      @id @default(autoincrement())
+  title        String
+  artist_name  String
+  image_path   String?
+  status       String   @default("pending")
+  description  String?
+  submitted_by Int?
+  approved_by  Int?
+  approved_at  DateTime?
+  created_at   DateTime @default(now())
+
+  // Relations
+  user          User? @relation("FanArtSubmittedBy", fields: [submitted_by], references: [id])
+  approved_user User? @relation("FanArtApprovedBy", fields: [approved_by], references: [id])
+
+  @@map("fan_arts")
+}
+
+model LiveStream {
+  id            Int      @id @default(autoincrement())
+  title         String
+  youtube_url   String
+  thumbnail_url String?
+  description   String?
+  is_active     Boolean  @default(true)
+  created_by    Int?
+  created_at    DateTime @default(now())
+  started_at    DateTime?
+  ended_at      DateTime?
+
+  // Relations
+  user User? @relation(fields: [created_by], references: [id])
+
+  @@map("live_streams")
+}
+
+model SiteSetting {
+  id            Int      @id @default(autoincrement())
+  setting_key   String   @unique
+  setting_value String?
+  updated_by    Int?
+  updated_at    DateTime @default(now())
+
+  @@map("site_settings")
+}
